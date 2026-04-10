@@ -11,9 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/auth"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/config"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/db"
-	auth "github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/handlers"
+	authHand "github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/handlers"
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/middleware"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
 )
 
@@ -36,7 +38,8 @@ func main() {
 	logger.Info("database connected successfully")
 
 	userRepo := repository.NewUserRepository(pool)
-	authHandler := auth.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	authHandler := authHand.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
 
@@ -51,6 +54,26 @@ func main() {
 
 	mux.HandleFunc("/auth/register", authHandler.Register)
 	mux.HandleFunc("/auth/login", authHandler.Login)
+
+	mux.Handle("/me", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := auth.UserFromContext(r.Context())
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error": "unauthorized",
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"user_id": user.UserID,
+			"email":   user.Email,
+		})
+	})))
+
 
 	server := &http.Server{
 		Addr:         ":" + cfg.AppPort,
