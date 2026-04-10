@@ -17,6 +17,16 @@ Initial project setup completed. Core API implementation will be added in subseq
 
 ```bash
 cp .env.example .env
+set -a
+source .env
+set +a
+cd backend
+go run ./cmd/taskflow-sabbavarapu
+```
+
+Or with Docker:
+
+```bash
 docker compose up --build
 ```
 
