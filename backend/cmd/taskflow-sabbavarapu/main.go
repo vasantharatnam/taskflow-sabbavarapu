@@ -13,6 +13,8 @@ import (
 
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/config"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/db"
+	auth "github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/handlers"
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
 )
 
 func main() {
@@ -33,6 +35,9 @@ func main() {
 
 	logger.Info("database connected successfully")
 
+	userRepo := repository.NewUserRepository(pool)
+	authHandler := auth.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -44,12 +49,15 @@ func main() {
 		})
 	})
 
+	mux.HandleFunc("/auth/register", authHandler.Register)
+	mux.HandleFunc("/auth/login", authHandler.Login)
+
 	server := &http.Server{
-		Addr : ":" + cfg.AppPort,
-		Handler: mux,
-        ReadTimeout: 10* time.Second,
-		WriteTimeout: 10* time.Second,
-		IdleTimeout: 60* time.Second,
+		Addr:         ":" + cfg.AppPort,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	go func() {

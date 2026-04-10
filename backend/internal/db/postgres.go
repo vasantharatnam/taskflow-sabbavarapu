@@ -5,25 +5,25 @@ import (
 	"fmt"
 	"time"
 
-    "github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/config"
 )
 
 func NewPostgresPool(cfg *config.Config) (*pgxpool.Pool, error) {
-	 dsn := fmt.Sprintf(
+	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		 cfg.DBUser,
-		 cfg.DBPassword,
-		 cfg.DBHost,
-		 cfg.DBPort,
-		 cfg.DBName,
-		 cfg.DBSSLMode,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName,
+		cfg.DBSSLMode,
 	)
-	 
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx , dsn)
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create postgres pool: %w", err)
 	}
