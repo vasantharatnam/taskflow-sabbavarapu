@@ -4,13 +4,24 @@ services:
     container_name: taskflow-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-  
+  api:
+    build:
+       context: ./backend
+       dockerfile: Dockerfile
+    container_name: taskflow-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
 volumes:
-  postgres_data:
+  db_data:
