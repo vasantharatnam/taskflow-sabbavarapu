@@ -29,6 +29,12 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	logger.Info("starting server", "env", cfg.AppEnv, "port", cfg.AppPort)
 
+	if err := db.RunMigrations(cfg); err != nil {
+		logger.Error("failed to run migrations", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("migrations applied successfully")
+
 	pool, err := db.NewPostgresPool(cfg)
 	if err != nil {
 		logger.Error("failed to connect to postgres", "error", err)
@@ -41,9 +47,11 @@ func main() {
 	userRepo := repository.NewUserRepository(pool)
 	projectRepo := repository.NewProjectRepository(pool)
 	taskRepo := repository.NewTaskRepository(pool)
+
 	authHandler := authHand.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
 	projectHandler := authHand.NewProjectHandler(projectRepo)
 	taskHandler := authHand.NewTaskHandler(taskRepo, projectRepo)
+	
 	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
