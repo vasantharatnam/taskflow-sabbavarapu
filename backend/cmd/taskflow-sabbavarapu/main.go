@@ -38,7 +38,9 @@ func main() {
 	logger.Info("database connected successfully")
 
 	userRepo := repository.NewUserRepository(pool)
+	projectRepo := repository.NewProjectRepository(pool)
 	authHandler := authHand.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	projectHandler := authHand.NewProjectHandler(projectRepo)
 	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
@@ -73,7 +75,30 @@ func main() {
 			"email":   user.Email,
 		})
 	})))
+    
+	mux.Handle("/projects", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			projectHandler.ListProjects(w , r)
+		case http.MethodPost:
+			projectHandler.CreateProject(w , r)
+		default:
+			http.NotFound(w, r)
+		}
+	})))
 
+	mux.Handle("/projects/", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			projectHandler.GetProjectByID(w , r)
+		case http.MethodPatch:
+			projectHandler.UpdateProject(w , r)
+		case http.MethodDelete:
+			projectHandler.DeleteProject(w , r)
+		default:
+			http.NotFound(w, r)
+		}
+	})))
 
 	server := &http.Server{
 		Addr:         ":" + cfg.AppPort,
