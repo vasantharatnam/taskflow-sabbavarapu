@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -39,8 +40,10 @@ func main() {
 
 	userRepo := repository.NewUserRepository(pool)
 	projectRepo := repository.NewProjectRepository(pool)
+	taskRepo := repository.NewTaskRepository(pool)
 	authHandler := authHand.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
 	projectHandler := authHand.NewProjectHandler(projectRepo)
+	taskHandler := authHand.NewTaskHandler(taskRepo, projectRepo)
 	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
@@ -88,6 +91,13 @@ func main() {
 	})))
 
 	mux.Handle("/projects/", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	  switch {
+		case strings.HasSuffix(r.URL.Path, "/tasks") && r.Method == http.MethodGet:
+			taskHandler.ListByProject(w, r)
+		case strings.HasSuffix(r.URL.Path, "/tasks") && r.Method == http.MethodPost:
+			taskHandler.Create(w, r)
+	  default:
 		switch r.Method {
 		case http.MethodGet:
 			projectHandler.GetProjectByID(w , r)
@@ -98,6 +108,7 @@ func main() {
 		default:
 			http.NotFound(w, r)
 		}
+	   }
 	})))
 
 	server := &http.Server{
