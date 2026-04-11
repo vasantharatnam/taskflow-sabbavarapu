@@ -14,7 +14,6 @@ import (
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/models"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/response"
-
 )
 
 type ProjectHandler struct {
@@ -44,25 +43,24 @@ type ProjectDetailResponse struct {
 	Tasks       []models.Task `json:"tasks"`
 }
 
-
-func (h *ProjectHandler) ListProjects (w http.ResponseWriter, r *http.Request) {
-	 user, ok := auth.UserFromContext(r.Context())
-	 if !ok {
-		response.WriteError(w , http.StatusUnauthorized , "unauthorized")
-		return
-	 }
-
-	 ctx, cancel  := context.WithTimeout(r.Context() , 5*time.Second)
-	 defer cancel()
-
-    projects , err := h.projectRepo.GetProjectsAccessedByUserID(ctx , user.UserID)
-	if err != nil {
-		response.WriteError(w , http.StatusInternalServerError , "internal server error")
+func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	response.WriteJSON(w , http.StatusOK , map[string]any{
-		"projects" : projects,
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	projects, err := h.projectRepo.GetProjectsAccessedByUserID(ctx, user.UserID)
+	if err != nil {
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response.WriteJSON(w, http.StatusOK, map[string]any{
+		"projects": projects,
 	})
 }
 
@@ -90,9 +88,9 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	project := &models.Project{
-		Name : req.Name,
-		Description : req.Description,
-		OwnerID : user.UserID,
+		Name:        req.Name,
+		Description: req.Description,
+		OwnerID:     user.UserID,
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -103,62 +101,62 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w , http.StatusCreated , project)
-	
+	response.WriteJSON(w, http.StatusCreated, project)
+
 }
 
 func (h *ProjectHandler) GetProjectByID(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
-    
+
 	if !ok {
 		response.WriteError(w, http.StatusUnauthorized, "Unauthorized")
-		return 
+		return
 	}
 
 	projectID := projectIDFromPath(r.URL.Path)
 	if projectID == "" {
-		response.WriteError(w , http.StatusNotFound , "project not found")
+		response.WriteError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
-	ctx , cancel := context.WithTimeout(r.Context() , 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	hasAccess, err := h.projectRepo.IsUserHasAccess(ctx , projectID , user.UserID)
+	hasAccess, err := h.projectRepo.IsUserHasAccess(ctx, projectID, user.UserID)
 	if err != nil {
-       response.WriteError(w , http.StatusInternalServerError , "internal server error")
-	   return
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
 	}
 	if !hasAccess {
-		response.WriteError(w , http.StatusForbidden , "forbidden")
-		return 
+		response.WriteError(w, http.StatusForbidden, "forbidden")
+		return
 	}
 
-	project , err := h.projectRepo.GetProjectByID(ctx , projectID)
+	project, err := h.projectRepo.GetProjectByID(ctx, projectID)
 	if err != nil {
-		if errors.Is(err , pgx.ErrNoRows) {
-			response.WriteError(w , http.StatusNotFound , "project not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			response.WriteError(w, http.StatusNotFound, "project not found")
 			return
 		}
-		response.WriteError(w , http.StatusInternalServerError , "internal server error")
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-    tasks, err := h.projectRepo.GetTasksByProjectID(ctx , projectID)
+	tasks, err := h.projectRepo.GetTasksByProjectID(ctx, projectID)
 	if err != nil {
-		response.WriteError(w , http.StatusInternalServerError , "internal server error")
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	
-	response.WriteJSON(w , http.StatusOK , ProjectDetailResponse{
-		ID: project.ID,
-		Name: project.Name,
+
+	response.WriteJSON(w, http.StatusOK, ProjectDetailResponse{
+		ID:          project.ID,
+		Name:        project.Name,
 		Description: project.Description,
-		OwnerID: project.OwnerID,
-		CreatedAt: project.CreatedAt,
-		Tasks: tasks,
+		OwnerID:     project.OwnerID,
+		CreatedAt:   project.CreatedAt,
+		Tasks:       tasks,
 	})
-} 
+}
 
 func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
@@ -253,7 +251,9 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "project deleted successfully",
+	})
 }
 
 func projectIDFromPath(path string) string {

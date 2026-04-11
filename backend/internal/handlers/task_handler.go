@@ -13,18 +13,18 @@ import (
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/auth"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/models"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
-	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/response"	
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/response"
 )
 
 type TaskHandler struct {
-	taskRepo *repository.TaskRepository
+	taskRepo    *repository.TaskRepository
 	projectRepo *repository.ProjectRepository
 }
 
 func NewTaskHandler(taskRepo *repository.TaskRepository, projectRepo *repository.ProjectRepository) *TaskHandler {
 	return &TaskHandler{
-		taskRepo : taskRepo,
-		projectRepo : projectRepo,
+		taskRepo:    taskRepo,
+		projectRepo: projectRepo,
 	}
 }
 
@@ -69,7 +69,7 @@ func (h *TaskHandler) ListByProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx , cancel := context.WithTimeout(r.Context() , 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
 	// Check if user has access to the project
@@ -314,7 +314,9 @@ func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "task deleted successfully",
+	})
 }
 
 func validateCreateTaskRequest(req CreateTaskRequest) map[string]string {
