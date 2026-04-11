@@ -4,7 +4,7 @@ VALUES (
     'Test User',
     'test@example.com',
     '$2a$12$AAXF4MejDyJoNBxEWbkggO5dlJnv8.U/WpJIpgOXzWQ6mlYuDrPye'
-);
+) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO projects (id, name, description, owner_id)
 VALUES (
@@ -12,7 +12,7 @@ VALUES (
     'Seed Project',
     'Initial seeded project',
     '11111111-1111-1111-1111-111111111111'
-);
+) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO tasks (id, title, description, status, priority, project_id, assignee_id, creator_id, due_date)
 VALUES
@@ -48,4 +48,4 @@ VALUES
     '11111111-1111-1111-1111-111111111111',
     '11111111-1111-1111-1111-111111111111',
     '2026-04-22'
-);
+) ON CONFLICT (id) DO NOTHING;

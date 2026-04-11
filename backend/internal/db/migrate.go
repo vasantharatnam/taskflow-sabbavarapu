@@ -1,10 +1,8 @@
 package db
 
 import (
-	"embed"
 	"errors"
 	"fmt"
-	"io/fs"
 
 	"github.com/golang-migrate/migrate/v4"
 	pgxv5 "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -13,10 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/config"
+	embeddedmigrations "github.com/vasantharatnam/taskflow-sabbavarapu/backend/migrations"
 )
-
-//go:embed../../migrations/*.sql
-var migrationFiles embed.FS
 
 func RunMigrations(cfg *config.Config) error {
 	connConfig, err := pgx.ParseConfig(buildDSN(cfg))
@@ -32,12 +28,7 @@ func RunMigrations(cfg *config.Config) error {
 		return fmt.Errorf("failed to create migration database driver: %w", err)
 	}
 
-	subFS, err := fs.Sub(migrationFiles, "../../migrations")
-	if err != nil {
-		return fmt.Errorf("failed to access embedded migrations: %w", err)
-	}
-
-	sourceDriver, err := iofs.New(subFS, ".")
+	sourceDriver, err := iofs.New(embeddedmigrations.Files, ".")
 	if err != nil {
 		return fmt.Errorf("failed to create migration source driver: %w", err)
 	}
