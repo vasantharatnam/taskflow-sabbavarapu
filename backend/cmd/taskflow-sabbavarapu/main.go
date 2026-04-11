@@ -51,7 +51,7 @@ func main() {
 	authHandler := authHand.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
 	projectHandler := authHand.NewProjectHandler(projectRepo)
 	taskHandler := authHand.NewTaskHandler(taskRepo, projectRepo)
-	
+
 	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
@@ -86,13 +86,13 @@ func main() {
 			"email":   user.Email,
 		})
 	})))
-    
+
 	mux.Handle("/projects", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			projectHandler.ListProjects(w , r)
+			projectHandler.ListProjects(w, r)
 		case http.MethodPost:
-			projectHandler.CreateProject(w , r)
+			projectHandler.CreateProject(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -100,23 +100,34 @@ func main() {
 
 	mux.Handle("/projects/", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-	  switch {
+		switch {
 		case strings.HasSuffix(r.URL.Path, "/tasks") && r.Method == http.MethodGet:
 			taskHandler.ListByProject(w, r)
 		case strings.HasSuffix(r.URL.Path, "/tasks") && r.Method == http.MethodPost:
 			taskHandler.Create(w, r)
-	  default:
+		default:
+			switch r.Method {
+			case http.MethodGet:
+				projectHandler.GetProjectByID(w, r)
+			case http.MethodPatch:
+				projectHandler.UpdateProject(w, r)
+			case http.MethodDelete:
+				projectHandler.DeleteProject(w, r)
+			default:
+				http.NotFound(w, r)
+			}
+		}
+	})))
+
+	mux.Handle("/tasks/", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case http.MethodGet:
-			projectHandler.GetProjectByID(w , r)
 		case http.MethodPatch:
-			projectHandler.UpdateProject(w , r)
+			taskHandler.Update(w, r)
 		case http.MethodDelete:
-			projectHandler.DeleteProject(w , r)
+			taskHandler.Delete(w, r)
 		default:
 			http.NotFound(w, r)
 		}
-	   }
 	})))
 
 	server := &http.Server{
