@@ -234,7 +234,5 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, map[string]string{
-		"message": "project deleted successfully",
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
