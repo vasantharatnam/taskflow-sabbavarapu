@@ -88,6 +88,8 @@ Assumption: Docker is installed.
 git clone <your-repo-url>
 cd taskflow-sabbavarapu
 cp .env.example .env
+cd backend
+source ../.env 
 docker compose up --build
 ```
 
