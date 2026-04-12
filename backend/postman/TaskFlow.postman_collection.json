@@ -13,6 +13,15 @@
           "name": "Register",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"register_email\", `jane.${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -42,7 +51,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"secret123\"\n}",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"{{register_email}}\",\n  \"password\": \"secret123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -210,6 +219,23 @@
         },
         {
           "name": "Delete Project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 204\", function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test(\"response body is empty\", function () {",
+                  "  pm.expect(pm.response.text()).to.eql(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -250,6 +276,19 @@
               }
             ],
             "url": "{{base_url}}/projects/{{project_id}}/tasks?status=todo"
+          }
+        },
+        {
+          "name": "List Tasks By Project With Assignee Filter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{base_url}}/projects/{{project_id}}/tasks?assignee_id={{user_id}}"
           }
         },
         {
@@ -299,7 +338,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Finish backend API\",\n  \"description\": \"Implement all required endpoints\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"due_date\": \"2026-04-30\"\n}",
+              "raw": "{\n  \"title\": \"Finish backend API\",\n  \"description\": \"Implement all required endpoints\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"assignee_id\": \"{{user_id}}\",\n  \"due_date\": \"2026-04-30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -337,6 +376,23 @@
         },
         {
           "name": "Delete Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 204\", function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test(\"response body is empty\", function () {",
+                  "  pm.expect(pm.response.text()).to.eql(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
