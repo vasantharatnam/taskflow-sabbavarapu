@@ -1,6 +1,6 @@
 # TaskFlow Backend
 
-Backend take-home implementation for TaskFlow, a minimal task management API with authentication, project management, and task tracking. The project is designed for quick local review with Docker, automatic migrations, and seeded test data.
+Backend take-home implementation for TaskFlow, a minimal task management API designed to demonstrate clean backend architecture, authentication, and relational data modeling.
 
 ## Tech Stack
 
@@ -13,7 +13,7 @@ Backend take-home implementation for TaskFlow, a minimal task management API wit
 - Docker
 - Docker Compose
 
-## Features
+## Features Implemented
 
 - User registration and login
 - JWT-based authentication with protected routes
@@ -24,6 +24,7 @@ Backend take-home implementation for TaskFlow, a minimal task management API wit
 - Seeded user, project, and tasks for quick testing
 - Automatic database migrations on application startup
 - Postman collection for reviewer-friendly API walkthrough
+- Clear separation of authentication (JWT) and authorization(resource-level access control)
 
 ## Architecture Decisions
 
@@ -44,6 +45,9 @@ Backend take-home implementation for TaskFlow, a minimal task management API wit
 
 - **Authorization kept close to resource access**  
   JWT validation is centralized in middleware, while ownership/access rules are enforced in handlers and repository queries where resource context is available. This makes route protection consistent while keeping authorization logic explicit.
+
+- **Designed for clarity over premature optimization**  
+  The system is intentionally simple and synchronous to keep the core API behavior easy to review. The structure allows scaling later (e.g., adding caching, background workers, or pagination) without major refactoring.
 
 ## Project Structure
 
@@ -86,6 +90,8 @@ cd taskflow-sabbavarapu
 cp .env.example .env
 docker compose up --build
 ```
+
+If the API container exits on first startup, re-run `docker compose up` once Postgres is fully ready.
 
 What this does:
 
@@ -134,6 +140,10 @@ Seeded project ID:
 ```
 
 ## API Overview
+
+All endpoints (except `/auth/*` and `/health`) require:
+
+Authorization: Bearer <token>
 
 ### Health
 
@@ -304,6 +314,7 @@ Not found:
 - Automatic embedded migrations improve reviewer experience, but they trade off some operational flexibility compared with a dedicated migration command in production systems.
 - I focused on the assignment’s core API behavior first; optional features such as pagination, stats endpoints, or wider automated test coverage were left secondary to a working end-to-end backend.
 - The service is intentionally simple and synchronous: no background workers, caching layer, or event-driven components were introduced because they would add complexity without improving the assignment’s core review goals.
+- Authorization decisions are enforced explicitly rather than abstracted away, so they remain easy to audit and reason about during review.
 
 ## Improvements
 
@@ -316,6 +327,7 @@ With more time, I would add:
 - stronger request validation and clearer domain-level error mapping
 - CI for tests, linting, and container validation
 - OpenAPI documentation alongside the Postman collection
+- Introduce service layer abstraction if business logic grows beyond simple CRUD
 
 ## Submission Notes
 
