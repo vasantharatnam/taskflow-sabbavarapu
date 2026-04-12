@@ -31,7 +31,7 @@ Backend take-home implementation for TaskFlow, a minimal task management API wit
   I used `net/http` instead of a larger framework to keep the request flow easy to read during review. For a take-home assignment, explicit routing and middleware make the code easier to inspect and discuss.
 
 - **Layered code by responsibility**  
-  The backend is organized into `handlers`, `repository`, `models`, `auth`, `middleware`, and `db`. Handlers manage HTTP concerns, repositories own SQL access, and middleware enforces authentication. This keeps responsibilities separate without adding unnecessary abstraction.
+  The backend is organized into `api`, `handlers`, `repository`, `models`, `auth`, `middleware`, `utils`, and `db`. HTTP request/response payloads live in `internal/api`, domain/database entities stay in `internal/models`, and repositories own SQL access. This keeps transport concerns separate from persistence models and makes handlers thinner.
 
 - **Direct SQL via `pgx` instead of an ORM**  
   I chose `pgx` so the data access layer stays explicit and predictable. This helps with authorization-sensitive queries, migration clarity, and debugging, especially for a relational schema with straightforward CRUD behavior.
@@ -56,6 +56,7 @@ Backend take-home implementation for TaskFlow, a minimal task management API wit
     ├── cmd/taskflow-sabbavarapu
     │   └── main.go
     ├── internal
+    │   ├── api
     │   ├── auth
     │   ├── config
     │   ├── db
@@ -63,7 +64,8 @@ Backend take-home implementation for TaskFlow, a minimal task management API wit
     │   ├── middleware
     │   ├── models
     │   ├── repository
-    │   └── response
+    │   ├── response
+    │   └── utils
     ├── migrations
     └── postman
         ├── TaskFlow.postman_collection.json

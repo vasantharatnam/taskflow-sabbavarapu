@@ -10,10 +10,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/api"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/auth"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/models"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/response"
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/utils"
 )
 
 type TaskHandler struct {
@@ -28,24 +30,6 @@ func NewTaskHandler(taskRepo *repository.TaskRepository, projectRepo *repository
 	}
 }
 
-type CreateTaskRequest struct {
-	Title       string  `json:"title"`
-	Description *string `json:"description"`
-	Status      string  `json:"status"`
-	Priority    string  `json:"priority"`
-	AssigneeID  *string `json:"assignee_id"`
-	DueDate     *string `json:"due_date"`
-}
-
-type UpdateTaskRequest struct {
-	Title       string  `json:"title"`
-	Description *string `json:"description"`
-	Status      string  `json:"status"`
-	Priority    string  `json:"priority"`
-	AssigneeID  *string `json:"assignee_id"`
-	DueDate     *string `json:"due_date"`
-}
-
 func (h *TaskHandler) ListByProject(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
@@ -53,7 +37,7 @@ func (h *TaskHandler) ListByProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectID := projectIDFromTaskListPath(r.URL.Path)
+	projectID := utils.ProjectIDFromTaskListPath(r.URL.Path)
 	if projectID == "" {
 		response.WriteError(w, http.StatusBadRequest, "invalid project ID")
 		return
@@ -62,7 +46,7 @@ func (h *TaskHandler) ListByProject(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	assigneeID := r.URL.Query().Get("assignee_id")
 
-	if status != "" && !isValidStatus(status) {
+	if status != "" && !utils.IsValidStatus(status) {
 		response.WriteValidationError(w, map[string]string{
 			"status": "is invalid",
 		})
@@ -101,19 +85,19 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectID := projectIDFromTaskListPath(r.URL.Path)
+	projectID := utils.ProjectIDFromTaskListPath(r.URL.Path)
 	if projectID == "" {
 		response.WriteError(w, http.StatusNotFound, "not found")
 		return
 	}
 
-	var req CreateTaskRequest
+	var req api.CreateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	fields := validateCreateTaskRequest(req)
+	fields := utils.ValidateCreateTaskRequest(req)
 	if len(fields) > 0 {
 		response.WriteValidationError(w, fields)
 		return
@@ -146,7 +130,7 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dueDate, err := parseOptionalDate(req.DueDate)
+	dueDate, err := utils.ParseOptionalDate(req.DueDate)
 	if err != nil {
 		response.WriteValidationError(w, map[string]string{
 			"due_date": "must be in YYYY-MM-DD format",
@@ -165,7 +149,7 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Status:      status,
 		Priority:    req.Priority,
 		ProjectID:   projectID,
-		AssigneeID:  normalizeOptionalString(req.AssigneeID),
+		AssigneeID:  utils.NormalizeOptionalString(req.AssigneeID),
 		CreatorID:   user.UserID,
 		DueDate:     dueDate,
 	}
@@ -185,19 +169,19 @@ func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID := taskIDFromPath(r.URL.Path)
+	taskID := utils.TaskIDFromPath(r.URL.Path)
 	if taskID == "" {
 		response.WriteError(w, http.StatusNotFound, "not found")
 		return
 	}
 
-	var req UpdateTaskRequest
+	var req api.UpdateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	fields := validateUpdateTaskRequest(req)
+	fields := utils.ValidateUpdateTaskRequest(req)
 	if len(fields) > 0 {
 		response.WriteValidationError(w, fields)
 		return
@@ -245,7 +229,7 @@ func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dueDate, err := parseOptionalDate(req.DueDate)
+	dueDate, err := utils.ParseOptionalDate(req.DueDate)
 	if err != nil {
 		response.WriteValidationError(w, map[string]string{
 			"due_date": "must be in YYYY-MM-DD format",
@@ -257,7 +241,7 @@ func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 	task.Description = req.Description
 	task.Status = req.Status
 	task.Priority = req.Priority
-	task.AssigneeID = normalizeOptionalString(req.AssigneeID)
+	task.AssigneeID = utils.NormalizeOptionalString(req.AssigneeID)
 	task.DueDate = dueDate
 
 	if err := h.taskRepo.UpdateTask(ctx, task); err != nil {
@@ -275,7 +259,7 @@ func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskID := taskIDFromPath(r.URL.Path)
+	taskID := utils.TaskIDFromPath(r.URL.Path)
 	if taskID == "" {
 		response.WriteError(w, http.StatusNotFound, "not found")
 		return
@@ -317,114 +301,4 @@ func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, map[string]string{
 		"message": "task deleted successfully",
 	})
-}
-
-func validateCreateTaskRequest(req CreateTaskRequest) map[string]string {
-	fields := make(map[string]string)
-
-	if strings.TrimSpace(req.Title) == "" {
-		fields["title"] = "is required"
-	}
-
-	status := strings.TrimSpace(req.Status)
-	if status != "" && !isValidStatus(status) {
-		fields["status"] = "is invalid"
-	}
-
-	if strings.TrimSpace(req.Priority) == "" {
-		fields["priority"] = "is required"
-	} else if !isValidPriority(req.Priority) {
-		fields["priority"] = "is invalid"
-	}
-
-	return fields
-}
-
-func validateUpdateTaskRequest(req UpdateTaskRequest) map[string]string {
-	fields := make(map[string]string)
-
-	if strings.TrimSpace(req.Title) == "" {
-		fields["title"] = "is required"
-	}
-
-	if !isValidStatus(req.Status) {
-		fields["status"] = "is invalid"
-	}
-
-	if !isValidPriority(req.Priority) {
-		fields["priority"] = "is invalid"
-	}
-
-	return fields
-}
-
-func isValidStatus(status string) bool {
-	switch strings.TrimSpace(status) {
-	case "todo", "in_progress", "done":
-		return true
-	default:
-		return false
-	}
-}
-
-func isValidPriority(priority string) bool {
-	switch strings.TrimSpace(priority) {
-	case "low", "medium", "high":
-		return true
-	default:
-		return false
-	}
-}
-
-func parseOptionalDate(dateStr *string) (*time.Time, error) {
-	if dateStr == nil || strings.TrimSpace(*dateStr) == "" {
-		return nil, nil
-	}
-
-	parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*dateStr))
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
-}
-
-func normalizeOptionalString(v *string) *string {
-	if v == nil {
-		return nil
-	}
-	trimmed := strings.TrimSpace(*v)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
-}
-
-func projectIDFromTaskListPath(path string) string {
-	path = strings.Trim(path, "/")
-	parts := strings.Split(path, "/")
-
-	if len(parts) != 3 {
-		return ""
-	}
-
-	if parts[0] != "projects" || parts[2] != "tasks" {
-		return ""
-	}
-
-	return parts[1]
-}
-
-func taskIDFromPath(path string) string {
-	path = strings.Trim(path, "/")
-	parts := strings.Split(path, "/")
-
-	if len(parts) != 2 {
-		return ""
-	}
-
-	if parts[0] != "tasks" {
-		return ""
-	}
-
-	return parts[1]
 }

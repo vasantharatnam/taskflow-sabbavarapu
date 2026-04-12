@@ -10,10 +10,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/api"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/auth"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/models"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/response"
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/utils"
 )
 
 type ProjectHandler struct {
@@ -22,25 +24,6 @@ type ProjectHandler struct {
 
 func NewProjectHandler(projectRepo *repository.ProjectRepository) *ProjectHandler {
 	return &ProjectHandler{projectRepo: projectRepo}
-}
-
-type CreateProjectRequest struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-}
-
-type UpdateProjectRequest struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-}
-
-type ProjectDetailResponse struct {
-	ID          string        `json:"id"`
-	Name        string        `json:"name"`
-	Description *string       `json:"description,omitempty"`
-	OwnerID     string        `json:"owner_id"`
-	CreatedAt   time.Time     `json:"created_at"`
-	Tasks       []models.Task `json:"tasks"`
 }
 
 func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +54,7 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req CreateProjectRequest
+	var req api.CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request payload")
 		return
@@ -113,7 +96,7 @@ func (h *ProjectHandler) GetProjectByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	projectID := projectIDFromPath(r.URL.Path)
+	projectID := utils.ProjectIDFromPath(r.URL.Path)
 	if projectID == "" {
 		response.WriteError(w, http.StatusNotFound, "project not found")
 		return
@@ -148,7 +131,7 @@ func (h *ProjectHandler) GetProjectByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, ProjectDetailResponse{
+	response.WriteJSON(w, http.StatusOK, api.ProjectDetailResponse{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description,
@@ -165,13 +148,13 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectID := projectIDFromPath(r.URL.Path)
+	projectID := utils.ProjectIDFromPath(r.URL.Path)
 	if projectID == "" {
 		response.WriteError(w, http.StatusNotFound, "not found")
 		return
 	}
 
-	var req UpdateProjectRequest
+	var req api.UpdateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -222,7 +205,7 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectID := projectIDFromPath(r.URL.Path)
+	projectID := utils.ProjectIDFromPath(r.URL.Path)
 	if projectID == "" {
 		response.WriteError(w, http.StatusNotFound, "not found")
 		return
@@ -254,19 +237,4 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, http.StatusOK, map[string]string{
 		"message": "project deleted successfully",
 	})
-}
-
-func projectIDFromPath(path string) string {
-	path = strings.Trim(path, "/")
-	parts := strings.Split(path, "/")
-
-	if len(parts) < 2 {
-		return ""
-	}
-
-	if parts[0] != "projects" {
-		return ""
-	}
-
-	return parts[1]
 }

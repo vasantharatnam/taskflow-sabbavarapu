@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"strconv"
+
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/utils"
 )
 
 type Config struct {
@@ -20,21 +21,21 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	jwtExpiryHours, err := strconv.Atoi(getEnv("JWT_EXPIRATION_HOURS", getEnv("JWT_EXPIRY_HOURS", "24")))
+	jwtExpiryHours, err := strconv.Atoi(utils.GetEnv("JWT_EXPIRATION_HOURS", utils.GetEnv("JWT_EXPIRY_HOURS", "24")))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_EXPIRATION_HOURS: %w", err)
 	}
 
 	cfg := &Config{
-		AppEnv:         getEnv("APP_ENV", "development"),
-		AppPort:        getEnv("APP_PORT", "8080"),
-		DBHost:         getEnv("DB_HOST", "localhost"),
-		DBPort:         getEnv("DB_PORT", "5432"),
-		DBUser:         getEnv("DB_USER", "postgres"),
-		DBPassword:     getEnv("DB_PASSWORD", "password"),
-		DBName:         getEnv("DB_NAME", "myapp"),
-		DBSSLMode:      getEnv("DB_SSLMODE", getEnv("DB_SSL_MODE", "disable")),
-		JWTSecret:      getEnv("JWT_SECRET", ""),
+		AppEnv:         utils.GetEnv("APP_ENV", "development"),
+		AppPort:        utils.GetEnv("APP_PORT", "8080"),
+		DBHost:         utils.GetEnv("DB_HOST", "localhost"),
+		DBPort:         utils.GetEnv("DB_PORT", "5432"),
+		DBUser:         utils.GetEnv("DB_USER", "postgres"),
+		DBPassword:     utils.GetEnv("DB_PASSWORD", "password"),
+		DBName:         utils.GetEnv("DB_NAME", "myapp"),
+		DBSSLMode:      utils.GetEnv("DB_SSLMODE", utils.GetEnv("DB_SSL_MODE", "disable")),
+		JWTSecret:      utils.GetEnv("JWT_SECRET", ""),
 		JWTExpiryHours: jwtExpiryHours,
 	}
 
@@ -45,10 +46,4 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-func getEnv(key, fallback string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return fallback
-	}
-	return val
-}
+

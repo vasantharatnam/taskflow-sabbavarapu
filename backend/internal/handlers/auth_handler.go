@@ -2,21 +2,21 @@ package handlers
 
 import (
 	"context"
-
 	"encoding/json"
 	"errors"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jackc/pgx"
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/api"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/auth"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/models"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/repository"
 	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/response"
+	"github.com/vasantharatnam/taskflow-sabbavarapu/backend/internal/utils"
 )
 
 type AuthHandler struct {
@@ -33,37 +33,14 @@ func NewAuthHandler(userRepo *repository.UserRepository, jwtSecret string, jwtEx
 	}
 }
 
-type RegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type AuthResponse struct {
-	Token string      `json:"token"`
-	User  AuthUserDTO `json:"user"`
-	Message string    `json:"message,omitempty"`
-}
-
-type AuthUserDTO struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
+	var req api.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 
-	fields := validateRegisterRequest(req)
+	fields := utils.ValidateRegisterRequest(req)
 	if len(fields) > 0 {
 		response.WriteValidationError(w, fields)
 		return
@@ -111,9 +88,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusCreated, AuthResponse{
+	response.WriteJSON(w, http.StatusCreated, api.AuthResponse{
 		Token: token,
-		User: AuthUserDTO{
+		User: api.AuthUserDTO{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -123,13 +100,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
+	var req api.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 
-	fields := validateLoginRequest(req)
+	fields := utils.ValidateLoginRequest(req)
 	if len(fields) > 0 {
 		response.WriteValidationError(w, fields)
 		return
@@ -160,9 +137,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, AuthResponse{
+	response.WriteJSON(w, http.StatusOK, api.AuthResponse{
 		Token: token,
-		User: AuthUserDTO{
+		User: api.AuthUserDTO{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -172,45 +149,3 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func validateRegisterRequest(req RegisterRequest) map[string]string {
-	fields := make(map[string]string)
-
-	if strings.TrimSpace(req.Name) == "" {
-		fields["name"] = "name is required"
-	}
-
-	if strings.TrimSpace(req.Email) == "" {
-		fields["email"] = "email is required"
-	} else if !isValidEmail(req.Email) {
-		fields["email"] = "invalid email format"
-	}
-
-	if strings.TrimSpace(req.Password) == "" {
-		fields["password"] = "is required"
-	} else if len(req.Password) < 6 {
-		fields["password"] = "must be at least 6 characters"
-	}
-
-	return fields
-}
-
-func validateLoginRequest(req LoginRequest) map[string]string {
-	fields := make(map[string]string)
-
-	if strings.TrimSpace(req.Email) == "" {
-		fields["email"] = "is required"
-	} else if !isValidEmail(req.Email) {
-		fields["email"] = "is invalid"
-	}
-
-	if strings.TrimSpace(req.Password) == "" {
-		fields["password"] = "is required"
-	}
-	return fields
-}
-
-func isValidEmail(email string) bool {
-	email = strings.TrimSpace(email)
-	pattern := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-	return regexp.MustCompile(pattern).MatchString(email)
-}
